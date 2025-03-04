@@ -1,0 +1,12 @@
+{
+    "datasources": [
+        {
+            "name" : "ArticleProcessor",
+            "scripts" : [
+                {
+                    "path" : "/article_processor"
+                }
+            ]
+        }
+    ]
+}

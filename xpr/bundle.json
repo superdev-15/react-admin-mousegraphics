@@ -1,0 +1,9 @@
+{
+    "templates" : [
+        { 
+            "name" : "Dashboard",
+            "element" : "index",
+            "options" : {}
+        }
+    ]
+}

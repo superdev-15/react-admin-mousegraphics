@@ -1,0 +1,11 @@
+[
+    {
+        "method" : "GET",
+        "route" : "/ajax_example_json",
+        "script" : {
+            "path" : "/ajax/script",
+            "options" : {}
+        },
+        "element" : "/ajax/json_formatter"
+    }
+]

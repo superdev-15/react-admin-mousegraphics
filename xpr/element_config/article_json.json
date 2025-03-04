@@ -1,0 +1,12 @@
+{
+    "datasources": [
+        {
+            "name" : "Article",
+            "scripts" : [
+                {
+                    "path" : "/article_ssjs"
+                }
+            ]
+        }
+    ]
+}
