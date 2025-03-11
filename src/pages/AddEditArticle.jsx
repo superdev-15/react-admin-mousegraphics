@@ -47,17 +47,18 @@ function AddEditArticle() {
   const location = useLocation();
   const sectionSlug = location.state?.sectionSlug;
   const { section_id, article_id } = useParams();
-  const [articleData, setArticleData] = useState(undefined)
-  const [articleId, setArticleId] = useState(article_id || "")
-  const [awards, setAwards] = useState([])
-  const [selectedAwards, setSelectedAwards] = useState([])
-  const [sections, setSections] = useState([])
-  const [articleInfo, setArticleInfo] = useState(articleValue)
-  const [error, setError] = useState("")
+  const [articleData, setArticleData] = useState(undefined);
+  const [articleId, setArticleId] = useState(article_id || "");
+  const [awards, setAwards] = useState([]);
+  const [selectedAwards, setSelectedAwards] = useState([]);
+  const [sections, setSections] = useState([]);
+  const [articleInfo, setArticleInfo] = useState(articleValue);
+  const [error, setError] = useState("");
   const [isAddSection, setIsAddSection] = useState(false)
   const [uploadingList, setUploadingList] = useState(false);
   const [mainPicInfo, setmainPicInfo] = useState(undefined);
   const [hoverPicInfo, setHoverPicInfo] = useState(undefined);
+  const [isMoveSection, setIsMoveSection] = useState(false);
 
   const [collapsedPanels, setCollapsedPanels] = useState({
     slug: true,
@@ -165,12 +166,12 @@ function AddEditArticle() {
           if (mainpic && mainpic["SourcePath"])
           setmainPicInfo(mainpic);
         }
+
         if (html.hoverpic) {
           let hoverpic = JSON.parse(html.hoverpic)
           if (hoverpic && hoverpic["SourcePath"]) {
             setHoverPicInfo(hoverpic);
           }
-          
         }
 
         if (html.types && Array.isArray(html.types)) {
@@ -312,7 +313,11 @@ function AddEditArticle() {
   }
 
   const deleteSectionRow = (indexToDelete) => {
-    setSections(prevSections => prevSections.filter((_, index) => index !== indexToDelete));
+    setSections(prevSections => {
+      let newSections = prevSections.filter((_, index) => index !== indexToDelete)
+      updateArticleInfo("types", newSections);
+      return newSections;
+    });
   };
 
   const sensors = useSensors(
@@ -323,13 +328,16 @@ function AddEditArticle() {
   );
 
   const handleDragEnd = (event) => {
+    setIsMoveSection(true)
     const { active, over } = event;
     
     if (active.id !== over.id) {
       setSections((items) => {
         const oldIndex = parseInt(active.id.split('-')[1]);
         const newIndex = parseInt(over.id.split('-')[1]);
-        return arrayMove(items, oldIndex, newIndex);
+        const newArray = arrayMove(items, oldIndex, newIndex);
+        updateArticleInfo("types", newArray)
+        return newArray
       });
     }
   };
@@ -356,15 +364,19 @@ function AddEditArticle() {
   };
 
   const updateSectionRow = (index, updatedSection) => {
-    setSections(prevSections => {
-      const newSections = [...prevSections];
-      newSections[index] = {
-        ...newSections[index],
-        ...updatedSection
-      };
-      updateArticleInfo("types", newSections)
-      return newSections;
-    });
+    // console.log(isMoveSection)
+    if (!isMoveSection) {
+      console.log(isMoveSection)
+      setSections(prevSections => {
+        const newSections = [...prevSections];
+        newSections[index] = {
+          ...newSections[index],
+          ...updatedSection
+        };
+        updateArticleInfo("types", newSections)
+        return newSections;
+      });
+    }
   };
 
   const handlePicUpload = async (e, field_name) => {
@@ -687,12 +699,10 @@ function AddEditArticle() {
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
+            onDragEnd={handleDragEnd}>
             <SortableContext
               items={sections.map((_, index) => `section-${index}`)}
-              strategy={verticalListSortingStrategy}
-            >
+              strategy={verticalListSortingStrategy}>
               <ul className="container">
                 {sections.length > 0 &&
                   sections.map((section, index) => (
@@ -725,7 +735,6 @@ function AddEditArticle() {
           <div className="container">
             <div className="row mt-lg-70 mt-sm-60 mt-xs-40 mb-lg-60 mb-sm-50 mb-xs-30 justify-content-center py-5">
               <div className="col-sm-10 col-sm-offset-1 col-xs-12 col-xs-offset-0 py-3">
-
                 <div className="row">
                   {/* URL alias */}
                   <div className="col-sm-6 col-xs-12">
@@ -796,7 +805,6 @@ function AddEditArticle() {
                   {/* Publish */}
                   <div className="col-sm-6 col-xs-12">
                     <div id="group-5" className="panel-group">
-                      
                       <div className="panel-custom">
                         <div className="panel-heading">
                           <a 
@@ -811,20 +819,16 @@ function AddEditArticle() {
                         <div id="id-11" className={`panel-collapse collapse ${collapsedPanels.published ? "in" : ""}`}>
                           <div className="panel-body">
                             <a
-                              onClick={e => 
-                                {
-                                  e.preventDefault()
-                                  updateArticleInfo('published', 1);
-                                }
-                                }
+                              onClick={e => {
+                                e.preventDefault()
+                                updateArticleInfo('published', 1);
+                              }}
                               className={`office p small text-center pt-lg-20 pb-lg-20 pt-sm-15 pb-sm-15 pt-xs-10 pb-xs-10 w50 inline-block pull-left border-ebebeb bg-gallery-20 nobel ${articleInfo.published === 1 ? "active" : ""}`}>Yes</a>
                             <a
-                              onClick={e => 
-                                {
-                                  e.preventDefault()
-                                  updateArticleInfo('published', 0);
-                                }
-                                }
+                              onClick={e => {
+                                e.preventDefault()
+                                updateArticleInfo('published', 0);
+                              }}
                               className={`office p small text-center pt-lg-20 pb-lg-20 pt-sm-15 pb-sm-15 pt-xs-10 pb-xs-10 w50 inline-block pull-left border-ebebeb bg-gallery-20 nobel ${articleInfo.published === 0 ? "active" : ""}`}>No</a>
                           </div>
                         </div>
@@ -852,26 +856,23 @@ function AddEditArticle() {
                               <div
                                 style={{right: '300px', top: '56px'}}
                                 className="loading hide alias"></div>
-                              <button
-
+                                <button
                                   style={{textDecoration: 'underline', position: 'relative', top: '20px', left: '33px'}}
-                                  className="button p small block">Upload File</button>
-
+                                  className="button p small block">
+                                  Upload File
+                                </button>
                               <input type="text" className="form-control-no hide" />
                               <div ></div>
                               {articleInfo["pdf"] && 
-                                <div
-                                    
-                                  style={{position: 'relative', top: '7px', left: '40px'}}
-                                >
+                                <div style={{position: 'relative', top: '7px', left: '40px'}}>
                                   <p>
-                                    
                                     <span style={{color: '#aaa'}}> (File size:  )</span>
                                   </p>
                                   <p
                                     className="icon-close pull-right bg-white relative pl-xs-15 p-0 m-0"
-                                    style={{float: 'left', textAlign: 'left', fontSize: '15px'}}
-                                    >delete file</p>
+                                    style={{float: 'left', textAlign: 'left', fontSize: '15px'}}>
+                                    delete file
+                                  </p>
                                 </div>
                               }
                             </div>
@@ -896,10 +897,17 @@ function AddEditArticle() {
               }
               <div className="inline-block save-or-cancel">
                 <button
-                  
-                  type="submit" className="button p xl dove-gray normal block border-bottom-ebebeb pb-xs-5">save &amp; exit</button>
+                  type="submit" 
+                  className="button p xl dove-gray normal block border-bottom-ebebeb pb-xs-5">
+                  save &amp; exit
+                </button>
                 <div className="mt-lg-30 mt-sm-20 mt-xs-15"></div>
-                <button type="button" className="button p small block" onClick={() => {navigate("/dashboard/list")}}>cancel</button>
+                <button 
+                  type="button" 
+                  className="button p small block" 
+                  onClick={() => {navigate("/dashboard/list")}}>
+                  cancel
+                </button>
               </div>
             </div>
           </div>

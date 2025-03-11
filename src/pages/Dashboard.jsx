@@ -1,9 +1,25 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { 
+  DndContext,
+  useSensor, 
+  useSensors,
+  MouseSensor,
+  TouchSensor,
+  DragOverlay,
+  closestCenter,
+} from "@dnd-kit/core";
 import { useSite } from "../context/site";
 import { useAuth } from "../context/auth";
 import ProductItem from "../components/ProductItem";
 import Preloader from "../components/Preloader";
+import {
+  arrayMove,
+  SortableContext, 
+  sortableKeyboardCoordinates, 
+  verticalListSortingStrategy,
+  rectSortingStrategy
+} from "@dnd-kit/sortable";
 
 function Dashboard() {
   let auth = useAuth()
@@ -16,13 +32,71 @@ function Dashboard() {
   const [showModal, setShowModal] = useState(false);
   const [articleId, setArticleId] = useState("")
   const [loaded, setLoaded] = useState(false)
+  const [activeId, setActiveId] = useState("");
+
+  const mouseSensor = useSensor(MouseSensor, {
+    // Require the mouse to move by 10 pixels before activating
+    activationConstraint: {
+      distance: 10,
+    },
+  });
+  const touchSensor = useSensor(TouchSensor, {
+    // Press delay of 250ms, with tolerance of 5px of movement
+    activationConstraint: {
+      delay: 250,
+      tolerance: 5,
+    },
+  });
+
+  const sensors = useSensors(mouseSensor, touchSensor);
+
+  const handleDragStart = useCallback((event) => {
+      setActiveId(event.active.id);
+  }, []);
+
+  const handleDragCancel = useCallback(() => {
+      setActiveId(null);
+  }, []);
+
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+    // console.log(event)
+    if (active.id !== over.id) {
+      setArticles((items) => {
+        setLoaded(true)
+        const oldIndex = parseInt(active.id.split('-')[1]);
+        const newIndex = parseInt(over.id.split('-')[1]);
+        const activeItem = items[oldIndex]
+        activeItem["SortOrder"] = newIndex
+        let formData = {}
+        formData.action = "putData";
+        formData.uri = "/articles/" + activeItem["Id"]
+        formData.data = activeItem
+    
+        fetch(`/__xpr__/pub_engine/admin-react-rebuild/element/ajax_handler`, {
+          method: "POST",
+          headers: { Auth: auth.user.token},
+          body: JSON.stringify(formData)
+        })
+        .then(res => res.json())
+        .then(data => {
+          // loadProducts(curSection)
+          setLoaded(false)
+        })
+        .catch(error => {
+          setLoaded(false)
+          console.log(error)
+        })
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  };
 
   const changeViewTo = (item) => {
     setView(item)
   }
 
   const fetchSections = () => {
-    
     let formData = {}
     formData.action = "getSections";
     fetch(`/__xpr__/pub_engine/admin-react-rebuild/element/ajax_handler`, {
@@ -101,7 +175,7 @@ function Dashboard() {
         loadProducts(curSection)
         setShowModal(false)
       })
-      .then(error => {
+      .catch(error => {
         console.log(error)
       })
     }
@@ -165,8 +239,7 @@ function Dashboard() {
                         sectionSlug: sections.find(section => section.Id.toString() === curSection.toString())?.Slug 
                       }
                     }
-                  )}}
-                >
+                  )}}>
                   <div className="relative block ar-lg-70 ar-xs-75 border-ebebeb upload-big hover-opacity overflow-hidden hover-opacity">
                     <div className="css3-middle-center">
                       <span className="icon-upload"></span>
@@ -187,8 +260,7 @@ function Dashboard() {
                         sectionSlug: sections.find(section => section.Id.toString() === curSection.toString())?.Slug 
                       }
                     }
-                  )}}
-                >
+                  )}}>
                   <div className="row-xs-height border-outline-ebebeb border-0 p-0 m-0">
                     <div className="col-lg-2 col-sm-3 relative pl-sm-0  col-xs-height col-xs-middle">
                       <div className="relative block ar-lg-65 ar-xs-65 upload-big hover-opacity overflow-hidden hover-opacity">
@@ -205,18 +277,41 @@ function Dashboard() {
               </div>
             }
             <div className="row column">
-              { articles.length > 0 &&
-                articles.map((article, index) => {
-                  return (
-                    <div 
-                      key={index} 
-                      className={view === 'list' ? "col-sm-12 col-xs-12" : "col-sm-3 col-xs-12 mb-lg-60 mb-md-50 mb-sm-40 mb-xs-30"}
-                    >
-                      <ProductItem article={article} row={index} view={view} sectionId={curSection} slug={sections.find(section => section.Id.toString() === curSection.toString())?.Slug} setShowModal={handleModal} setLoaded={handleLoaded}/>
-                    </div>
-                  )
-                })
-              }
+              <DndContext 
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                onDragCancel={handleDragCancel}>
+                <SortableContext
+                  items={articles}
+                  strategy={rectSortingStrategy}>
+                  { articles.length > 0 &&
+                    articles.map((article, index) => {
+                      return (
+                        // <div 
+                        //   key={index} 
+                        //   className={view === 'list' ? "col-sm-12 col-xs-12" : "col-sm-3 col-xs-12 mb-lg-60 mb-md-50 mb-sm-40 mb-xs-30"}
+                        // >
+                          <ProductItem 
+                            key={index}
+                            article={article} 
+                            row={index}
+                            view={view} 
+                            sectionId={curSection} 
+                            slug={sections.find(section => section.Id.toString() === curSection.toString())?.Slug} 
+                            setShowModal={handleModal} 
+                            setLoaded={handleLoaded}
+                          />
+                        // </div>
+                      )
+                    })
+                  }
+                </SortableContext>
+                {/* <DragOverlay adjustScale style={{ transformOrigin: '0 0 ' }}>
+                  {activeId ? <Item id={activeId} isDragging /> : null}
+                </DragOverlay> */}
+              </DndContext>
             </div>
           </div>
         }

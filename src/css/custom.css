@@ -685,7 +685,6 @@ body{
     z-index: 6;
     margin: auto;
     display: inline-block;
-    display:none;
     width: 348px;
 }
 .ellipsis{

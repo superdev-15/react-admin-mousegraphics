@@ -615,8 +615,7 @@ function SectionItem (props) {
                 <div className="form-group">
                   <div 
                     ref={mainEditorRef} 
-                    style={{ height: '200px', marginBottom: '50px' }}
-                  />
+                    style={{ height: '200px', marginBottom: '50px' }}/>
                 </div>
               </div>
             </div>
@@ -672,7 +671,6 @@ function SectionItem (props) {
                     <span className="" style={{position: 'relative'}}>Upload File</span>
                   </div>
                 }
-                
                 {curSectionDetail["pdf"] && 
                   <div style={{position: 'relative', top: '7px', left: '40px'}}>
                     <p>
@@ -736,7 +734,6 @@ function SectionItem (props) {
           </div>
         </div>
       </div>
-
     </div>
   )
 }
